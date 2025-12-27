@@ -1,0 +1,27 @@
+services:
+  # 1. The Tunnel (The Airlock)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=eyJhIjoiZTNkZDg5MmI3OTY2YmVmMjljM2YwZjRlMTBiYjI0Y2IiLCJ0IjoiMWQ3Y2NjMTUtMmJiMC00ZmY1LWJiZGYtMjM1MmZjMzMyMzcxIiwicyI6Ik1tRTROalkxT0dJdFlXTmhaaTAwWlRObUxXSmxOR0l0WTJSaU1qVTJOelF5WW1VNSJ9
+    networks:
+      - miravaz-net
+
+  # 2. The Commander (The API)
+  commander:
+    build: .
+    container_name: commander
+    command: uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ./main.py:/app/main.py # Hot-reload: changes to main.py apply instantly
+    working_dir: /app
+    networks:
+      - miravaz-net
+
+# 3. Private Network (So they can talk)
+networks:
+  miravaz-net:
+    driver: bridge
