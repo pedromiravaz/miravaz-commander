@@ -1,5 +1,4 @@
 services:
-  # 1. The Tunnel (The Airlock)
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared
@@ -10,18 +9,27 @@ services:
     networks:
       - miravaz-net
 
-  # 2. The Commander (The API)
   commander:
-    build: .
+    image: ghcr.io/pedromiravaz/miravaz-commander:latest
     container_name: commander
+    restart: always
+    # --- MISSING LINES ADDED BELOW ---
     command: uvicorn main:app --host 0.0.0.0 --port 8000
-    #volumes:
-    #  - ./main.py:/app/main.py # Hot-reload: changes to main.py apply instantly
-    working_dir: /app
+    ports:
+      - "8000:8000" # Required if you want to test http://localhost:8000
+    # ---------------------------------
     networks:
       - miravaz-net
 
-# 3. Private Network (So they can talk)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    command: --interval 300
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock # Watchtower NEEDS this to work
+    networks:
+      - miravaz-net
+
 networks:
   miravaz-net:
     driver: bridge
