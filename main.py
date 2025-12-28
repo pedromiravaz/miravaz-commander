@@ -68,3 +68,64 @@ async def rip_spotify_song(request: MusicRequest):
         except httpx.RequestError as exc:
             print(f"An error occurred while requesting {exc.request.url!r}.")
             raise HTTPException(status_code=503, detail=f"Worker unreachable: {exc}")
+
+# --- SPOTIFY2MP3 PROXY ENDPOINTS ---
+
+class SearchRequest(BaseModel):
+    query: str
+
+class YoutubeUrlRequest(BaseModel):
+    url: str
+
+@app.post("/v1/spotify/meta")
+async def get_spotify_metadata(request: MusicRequest):
+    """Proxy for extracting metadata from Spotify URL."""
+    worker_url = "http://spotify2mp3:8000/v1/spotify/meta"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(worker_url, json={"url": request.url}, timeout=30.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            return resp.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Worker unreachable: {exc}")
+
+@app.post("/v1/youtube/search")
+async def search_youtube(request: SearchRequest):
+    """Proxy for searching YouTube."""
+    worker_url = "http://spotify2mp3:8000/v1/youtube/search"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(worker_url, json={"query": request.query}, timeout=30.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            return resp.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Worker unreachable: {exc}")
+
+@app.post("/v1/youtube/download")
+async def download_youtube(request: YoutubeUrlRequest):
+    """Proxy for downloading from YouTube."""
+    worker_url = "http://spotify2mp3:8000/v1/youtube/download"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(worker_url, json={"url": request.url}, timeout=120.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            return resp.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Worker unreachable: {exc}")
+
+@app.post("/v1/convert")
+async def convert_spotify_to_mp3(request: MusicRequest):
+    """Orchestrator: Input Spotify URL -> Output MP3."""
+    worker_url = "http://spotify2mp3:8000/v1/convert"
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(worker_url, json={"url": request.url}, timeout=120.0)
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail=resp.text)
+            return resp.json()
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Worker unreachable: {exc}")
+            
